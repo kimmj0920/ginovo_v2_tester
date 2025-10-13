@@ -28,6 +28,8 @@ class _BluetoothExampleState extends State<BluetoothExample> {
   String scanStatus = "로딩중";
   List<String> receivedMessages = ["wait"]; // 수신된 메시지 리스트
   bool isSendMessageButtonDisabled = false;
+  bool isaccRawMode = false;
+  bool isaccVecMode = false;
 
   String batteryTxt = "";
   String batteryTestStatus = "대기중";
@@ -151,17 +153,26 @@ class _BluetoothExampleState extends State<BluetoothExample> {
         characteristic.onValueReceived.listen((value) {
       // 바이트 배열을 문자열로 변환
       String message = String.fromCharCodes(value);
-      if (!message.contains("ready") && !message.contains('{"batt":')) {
-        //print("수신된 메시지: $message");
+      if (!message.contains("ready") &&
+          !message.contains('{"batt":') &&
+          !message.contains("state")) {
+        print("수신된 메시지: $message");
 
         List<double> datas = BallDataManager.instance.translateData(message);
-        BallDataManager.wList.add(datas[0]);
-        BallDataManager.xList.add(datas[1]);
-        BallDataManager.yList.add(datas[2]);
-        BallDataManager.zList.add(0);
-        BallDataManager.timestamp.add(DateTime.now());
-        vm.Quaternion q = vm.Quaternion(datas[1], datas[2], 0, datas[0]);
-        BallDataManager.quaternionList.add(q);
+        if (datas.length == 3) {
+          BallDataManager.wList.add(datas[0]);
+          BallDataManager.xList.add(datas[1]);
+          BallDataManager.yList.add(datas[2]);
+          BallDataManager.zList.add(0);
+          BallDataManager.timestamp.add(DateTime.now());
+        } else if (datas.length == 1) {
+          print("하나짜리 데이터 수신: ${datas[0]}");
+          BallDataManager.wList.add(datas[0]);
+          BallDataManager.xList.add(0);
+          BallDataManager.yList.add(0);
+          BallDataManager.zList.add(0);
+          BallDataManager.timestamp.add(DateTime.now());
+        }
 
         setState(() {
           receivedMessages.add(message); // 수신된 메시지를 리스트에 추가
@@ -236,7 +247,7 @@ class _BluetoothExampleState extends State<BluetoothExample> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bluetooth 통신 예제'),
+        title: Text('테스트'),
       ),
       body: Center(
         child: Column(
@@ -270,12 +281,6 @@ class _BluetoothExampleState extends State<BluetoothExample> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: isSendMessageButtonDisabled
-                      ? null
-                      : () => sendMessageButton('{"cmd":"accRaw"}'),
-                  child: Text('메시지 전송'),
-                ),
-                ElevatedButton(
                   onPressed: startScan,
                   child: Text('다시 스캔하기'),
                 ),
@@ -285,7 +290,46 @@ class _BluetoothExampleState extends State<BluetoothExample> {
                 ),
               ],
             ),
-            SizedBox(height: 15),
+            SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: isSendMessageButtonDisabled
+                      ? null
+                      : () => {
+                            BallDataManager.clear(),
+                            sendMessageButton('{"cmd":"accRaw"}'),
+                            setState(() {
+                              isaccRawMode = true;
+                            })
+                          },
+                  child: Text('accRaw 전송'),
+                ),
+                ElevatedButton(
+                  onPressed: isSendMessageButtonDisabled
+                      ? null
+                      : () => {
+                            BallDataManager.clear(),
+                            sendMessageButton('{"cmd":"accVec"}'),
+                            setState(() {
+                              isaccVecMode = true;
+                            })
+                          },
+                  child: Text('accVec 전송'),
+                ),
+                ElevatedButton(
+                  onPressed: isSendMessageButtonDisabled
+                      ? null
+                      : () => sendMessageButton('{"cmd":"idle"}'),
+                  child: Text('중지'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade100,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 6),
             Text(
               '수신된 메시지:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -294,15 +338,27 @@ class _BluetoothExampleState extends State<BluetoothExample> {
             ElevatedButton(
               onPressed: () async {
                 final csvHelper = CsvHelper();
-                await csvHelper.saveToCsvAccRaw(
-                  BallDataManager.wList,
-                  BallDataManager.xList,
-                  BallDataManager.yList,
-                  BallDataManager.zList,
-                  BallDataManager.timestamp,
-                );
+
+                if (isaccRawMode) {
+                  await csvHelper.saveToCsvAccRaw(
+                    BallDataManager.wList,
+                    BallDataManager.xList,
+                    BallDataManager.yList,
+                    BallDataManager.zList,
+                    BallDataManager.timestamp,
+                  );
+                } else if (isaccVecMode) {
+                  await csvHelper.saveAccVecToCsv(
+                    BallDataManager.wList,
+                    BallDataManager.timestamp,
+                  );
+                }
 
                 showAutoDismissDialog(context, '저장 완료', 'CSV 파일 저장이 완료되었습니다.');
+                setState(() {
+                  isaccRawMode = false;
+                  isaccVecMode = false;
+                });
               },
               child: Text('csv 저장'),
             ),
@@ -356,18 +412,20 @@ class _BluetoothExampleState extends State<BluetoothExample> {
 
   Future<void> makeBatteryTestCSV() async {
     List<String> values = [];
+    List<bool> isChg = [];
     List<DateTime> timestamps = [];
 
     if (batteryStatusList.isEmpty) return;
 
     for (var status in batteryStatusList) {
       values.add(status.value);
+      isChg.add(status.isChg);
       timestamps.add(status.timestamp);
     }
 
     final csvHelper = CsvHelper();
     await csvHelper
-        .saveBatteryStatus(values, timestamps, targetDevice!.advName)
+        .saveBatteryStatus(values, isChg, timestamps, targetDevice!.advName)
         .whenComplete(() => batteryStatusList.clear());
   }
 

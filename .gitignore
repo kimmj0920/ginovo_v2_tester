@@ -41,3 +41,66 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Flutter/Dart/Pub 관련
+.dart_tool/
+.packages
+.pub-cache/
+build/
+flutter_*.png
+generated_plugin_registrant.dart
+
+# iOS 관련
+ios/Flutter/.last_build_id
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Xcode 관련
+*.xcuserstate
+*.xcworkspace
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcconfig
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Android 관련
+android/app/.cxx/
+android/.gradle/
+android/.idea/
+android/app/build/
+android/local.properties
+.gradle/
+.idea/
+*.iml
+*.apk
+*.aar
+
+# VS Code 관련
+.vscode/
+*.code-workspace
+
+# IntelliJ 관련
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# 기타 OS/에디터 파일
+.DS_Store
+Thumbs.db
+*.swp
+
+# Firebase 관련
+*.firebase/
+firebase-debug.log
+
+# 환경 설정 파일
+.env

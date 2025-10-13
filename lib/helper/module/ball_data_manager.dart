@@ -1,16 +1,13 @@
-
 import 'dart:math';
 
 import 'package:ginovo_result/helper/module/rotation_tracker.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-
-mixin BallDataManagerInterface{
+mixin BallDataManagerInterface {
   init();
 }
 
-
-class BallDataManager with BallDataManagerInterface{
+class BallDataManager with BallDataManagerInterface {
   static BallDataManager instance = BallDataManager();
   static Quaternion? initialQT;
   static Quaternion? currentQT;
@@ -18,7 +15,7 @@ class BallDataManager with BallDataManagerInterface{
   static const double ballRadius = 0.021335; // 단위: 미터
   static List<double> wList = [];
   static List<double> xList = [];
-  static List<double> yList= [];
+  static List<double> yList = [];
   static List<double> zList = [];
   static List<DateTime> timestamp = [];
   static List<Quaternion> quaternionList = [];
@@ -27,13 +24,11 @@ class BallDataManager with BallDataManagerInterface{
 
   static RotationTracker rotationTracker = RotationTracker();
   @override
-  init() {
+  init() {}
 
-  }
-
-
-  translateData(String message){
-    List<double> insList= message.split(',').map((e)=>double.parse(e)).toList();
+  translateData(String message) {
+    List<double> insList =
+        message.split(',').map((e) => double.parse(e)).toList();
     return insList;
   }
 
@@ -44,16 +39,21 @@ class BallDataManager with BallDataManagerInterface{
     double rollRad = radians(roll);
 
     // 쿼터니언 계산
-    double qw = cos(yawRad / 2) * cos(pitchRad / 2) * cos(rollRad / 2) + sin(yawRad / 2) * sin(pitchRad / 2) * sin(rollRad / 2);
-    double qx = sin(yawRad / 2) * cos(pitchRad / 2) * cos(rollRad / 2) - cos(yawRad / 2) * sin(pitchRad / 2) * sin(rollRad / 2);
-    double qy = cos(yawRad / 2) * sin(pitchRad / 2) * cos(rollRad / 2) + sin(yawRad / 2) * cos(pitchRad / 2) * sin(rollRad / 2);
-    double qz = cos(yawRad / 2) * cos(pitchRad / 2) * sin(rollRad / 2) - sin(yawRad / 2) * sin(pitchRad / 2) * cos(rollRad / 2);
+    double qw = cos(yawRad / 2) * cos(pitchRad / 2) * cos(rollRad / 2) +
+        sin(yawRad / 2) * sin(pitchRad / 2) * sin(rollRad / 2);
+    double qx = sin(yawRad / 2) * cos(pitchRad / 2) * cos(rollRad / 2) -
+        cos(yawRad / 2) * sin(pitchRad / 2) * sin(rollRad / 2);
+    double qy = cos(yawRad / 2) * sin(pitchRad / 2) * cos(rollRad / 2) +
+        sin(yawRad / 2) * cos(pitchRad / 2) * sin(rollRad / 2);
+    double qz = cos(yawRad / 2) * cos(pitchRad / 2) * sin(rollRad / 2) -
+        sin(yawRad / 2) * sin(pitchRad / 2) * cos(rollRad / 2);
 
     // 쿼터니언 반환
     return Quaternion(qw, qx, qy, qz);
   }
 
-Vector3 getRelativeDirection(Quaternion initialQuaternion, Quaternion newQuaternion) {
+  Vector3 getRelativeDirection(
+      Quaternion initialQuaternion, Quaternion newQuaternion) {
     Quaternion container = initialQuaternion;
     container.conjugate();
     // 두 쿼터니언의 차이를 구하기 위해, 새로운 쿼터니언에 초기 쿼터니언의 켤레를 곱한다.
@@ -65,23 +65,24 @@ Vector3 getRelativeDirection(Quaternion initialQuaternion, Quaternion newQuatern
     return rotationAxis;
   }
 
-  void convert(Quaternion q){
-    if(initialQT==null){
+  void convert(Quaternion q) {
+    if (initialQT == null) {
       initialQT = q;
       rotationTracker.lastQuaternion = q;
       return;
-    }else{
+    } else {
       // 상대 회전 방향 벡터 계산
       currentQT = q;
 
-      bool isTurned =  rotationTracker.checkFullRotation(q);
+      bool isTurned = rotationTracker.checkFullRotation(q);
 
       print("회전 여부:  ${isTurned}");
     }
   }
 
   /// 두 쿼터니언의 차이로 이동 벡터 계산
-  List<double> quaternionDifferenceToMoveVector(Quaternion qPrev, Quaternion qCurrent) {
+  List<double> quaternionDifferenceToMoveVector(
+      Quaternion qPrev, Quaternion qCurrent) {
     // qRelative = qPrev.inverse() * qCurrent
     Quaternion qRelative = qPrev.customInverse().multiply(qCurrent);
 
@@ -89,9 +90,26 @@ Vector3 getRelativeDirection(Quaternion initialQuaternion, Quaternion newQuatern
     Map<String, dynamic> rotationData = qRelative.toRotationAxisAndAngle();
     double theta = rotationData['angle'];
     List<double> axis = rotationData['axis'];
-    print("theta: "+theta.toStringAsFixed(1) +" axis: "+rotationData['axis'].toString());
+    print("theta: " +
+        theta.toStringAsFixed(1) +
+        " axis: " +
+        rotationData['axis'].toString());
     // 이동 벡터 계산: 축 * 각도
     return [axis[0] * theta, axis[1] * theta, axis[2] * theta];
   }
 
+  static clear() {
+    initialQT = null;
+    currentQT = null;
+    previousQT = null;
+    wList.clear();
+    xList.clear();
+    yList.clear();
+    zList.clear();
+    timestamp.clear();
+    quaternionList.clear();
+    quaternionRelativeList.clear();
+    directionVectors.clear();
+    rotationTracker = RotationTracker();
+  }
 }

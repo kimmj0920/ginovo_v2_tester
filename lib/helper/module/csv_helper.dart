@@ -92,18 +92,34 @@ class CsvHelper {
     print("CSV 파일이 저장되었습니다: $path");
   }
 
-  Future<void> saveBatteryStatus(
-      List<String> value, List<DateTime> timestamp, String deviceName) async {
+  Future<void> saveAccVecToCsv(List<double> w, List<DateTime> timestamp) async {
+    List<List<dynamic>> rows = [
+      ["accVec", "timestamp"]
+    ];
+
+    for (int i = 0; i < w.length; i++) {
+      rows.add([w[i], timestamp[i].millisecondsSinceEpoch]);
+    }
+
+    String csvData = const ListToCsvConverter().convert(rows);
+    final path = await _generateFilePath("accVector");
+    await File(path).writeAsString(csvData);
+    Fluttertoast.showToast(msg: "파일이 저장되었습니다.");
+    print("CSV 파일이 저장되었습니다: $path");
+  }
+
+  Future<void> saveBatteryStatus(List<String> value, List<bool> isChg,
+      List<DateTime> timestamp, String deviceName) async {
     if (value.length != timestamp.length) {
       throw Exception("데이터의 길이가 같아야 합니다.");
     }
 
     List<List<dynamic>> rows = [
-      ["timestamp(KST)", "value(%)"]
+      ["timestamp(KST)", "value(%)", "isChg"]
     ];
 
     for (int i = 0; i < value.length; i++) {
-      rows.add([timestamp[i], value[i]]);
+      rows.add([timestamp[i], value[i], isChg[i] ? 1 : 0]);
     }
 
     String csvData = const ListToCsvConverter().convert(rows);

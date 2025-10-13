@@ -1,33 +1,43 @@
+import 'dart:convert';
+
 class BallBatteryStatus {
   String value = "";
+  bool isChg = false;
   DateTime timestamp = DateTime.now();
 
   BallBatteryStatus(String message, this.timestamp) {
-    (message.contains("DisConnect"))
-        ? value = message
-        : value = getBatteryValue(message);
+    final bool isDisconnected = message.contains("DisConnect");
+
+    if (isDisconnected) {
+      value = message;
+      isChg = false;
+    } else {
+      final data = getBatteryValue(message);
+      value = data['batt'] ?? "null";
+      isChg = data['isChg'] ?? false;
+    }
   }
 
-  String getBatteryValue(String message) {
-    String key = "";
-    String value = "";
-
-    RegExp regExp = RegExp(r'{"(.*?)":"(.*?)"}'); // 정규식 패턴
-    Match? match = regExp.firstMatch(message); // 패턴 매칭
-
-    if (match != null && match.groupCount == 2) {
-      String key = match.group(1)!;
-      String value = match.group(2)!;
-      return value; // key-value 반환
-    } else {
-      print("유효한 형식이 아닙니다.");
-      return "null";
+  Map<String, dynamic> getBatteryValue(String message) {
+    try {
+      final Map<String, dynamic> data = jsonDecode(message);
+      return {
+        "batt": data['batt']?.toString() ?? "null",
+        "isChg": (data['isChg'] == 1), // 1이면 true, 아니면 false
+      };
+    } catch (e) {
+      print("유효한 JSON 형식이 아닙니다: $e");
+      return {
+        "batt": "null",
+        "isChg": false,
+      };
     }
   }
 
   List<String> toList() {
     return [
       value.toString(),
+      isChg ? "true" : "false",
       timestamp.toIso8601String(), // 날짜를 문자열로 변환
     ];
   }
